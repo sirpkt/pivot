@@ -2,14 +2,6 @@ import { Class, Instance, isInstanceOf } from 'immutable-class';
 
 export type SourceListScan = "disable" | "auto";
 
-export interface RequestDecoratorFactoryOptions {
-  config: any;
-}
-
-export interface DruidRequestDecoratorModule {
-  druidRequestDecorator: (log: (line: string) => void, options: RequestDecoratorFactoryOptions) => DruidRequestDecorator;
-}
-
 export interface ClusterValue {
   host?: string;
   timeout?: number;
@@ -19,9 +11,6 @@ export interface ClusterValue {
   sourceListRefreshInterval?: number;
   sourceReintrospectOnLoad?: boolean;
   sourceReintrospectInterval?: number;
-  druidRequestDecorator?: string;
-
-  druidRequestDecoratorModule?: DruidRequestDecoratorModule;
 }
 
 export interface ClusterJS {
@@ -33,13 +22,17 @@ export interface ClusterJS {
   sourceListRefreshInterval?: number;
   sourceReintrospectOnLoad?: boolean;
   sourceReintrospectInterval?: number;
-  druidRequestDecorator?: string;
+}
+
+function parseIntFromPossibleString(x: any) {
+  return typeof x === 'string' ? parseInt(x, 10) : x;
 }
 
 var check: Class<ClusterValue, ClusterJS>;
 export class Cluster implements Instance<ClusterValue, ClusterJS> {
   static DEFAULT_TIMEOUT = 40000;
   static DEFAULT_INTROSPECTION_STRATEGY = 'segment-metadata-fallback';
+  static DEFAULT_SOURCE_LIST_REFRESH_INTERVAL = 15000;
 
   static isCluster(candidate: any): candidate is Cluster {
     return isInstanceOf(candidate, Cluster);
@@ -54,8 +47,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       sourceListRefreshOnLoad,
       sourceListRefreshInterval,
       sourceReintrospectOnLoad,
-      sourceReintrospectInterval,
-      druidRequestDecorator
+      sourceReintrospectInterval
     } = parameters;
 
     // host might be written as druidHost or brokerHost
@@ -63,14 +55,13 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
     var value: ClusterValue = {
       host,
-      timeout: typeof timeout === 'string' ? parseInt(timeout as any, 10) : timeout,
+      timeout: parseIntFromPossibleString(timeout),
       introspectionStrategy: introspectionStrategy,
       sourceListScan: sourceListScan,
       sourceListRefreshOnLoad: sourceListRefreshOnLoad,
-      sourceListRefreshInterval: sourceListRefreshInterval,
+      sourceListRefreshInterval: parseIntFromPossibleString(sourceListRefreshInterval),
       sourceReintrospectOnLoad: sourceReintrospectOnLoad,
-      sourceReintrospectInterval: sourceReintrospectInterval,
-      druidRequestDecorator
+      sourceReintrospectInterval: parseIntFromPossibleString(sourceReintrospectInterval)
     };
     return new Cluster(value);
   }
@@ -84,9 +75,6 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   public sourceListRefreshInterval: number;
   public sourceReintrospectOnLoad: boolean;
   public sourceReintrospectInterval: number;
-  public druidRequestDecorator: string;
-
-  public druidRequestDecoratorModule: string;
 
   constructor(parameters: ClusterValue) {
     var host = parameters.host;
@@ -96,13 +84,18 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
     this.timeout = parameters.timeout || Cluster.DEFAULT_TIMEOUT;
     this.introspectionStrategy = parameters.introspectionStrategy || Cluster.DEFAULT_INTROSPECTION_STRATEGY;
     this.sourceListScan = parameters.sourceListScan;
-    this.sourceListRefreshOnLoad = parameters.sourceListRefreshOnLoad;
-    this.sourceListRefreshInterval = parameters.sourceListRefreshInterval;
+
+    this.sourceListRefreshOnLoad = parameters.sourceListRefreshOnLoad || false;
+    this.sourceListRefreshInterval = parameters.sourceListRefreshInterval || Cluster.DEFAULT_SOURCE_LIST_REFRESH_INTERVAL;
+    if (this.sourceListRefreshInterval && this.sourceListRefreshInterval < 1000) {
+      throw new Error(`can not set sourceListRefreshInterval to < 1000 (is ${this.sourceListRefreshInterval})`);
+    }
+
     this.sourceReintrospectOnLoad = parameters.sourceReintrospectOnLoad;
     this.sourceReintrospectInterval = parameters.sourceReintrospectInterval;
-    this.druidRequestDecorator = parameters.druidRequestDecorator;
-
-    this.druidRequestDecoratorModule = parameters.druidRequestDecoratorModule;
+    if (this.sourceReintrospectInterval && this.sourceReintrospectInterval < 1000) {
+      throw new Error(`can not set sourceReintrospectInterval to < 1000 (is ${this.sourceReintrospectInterval})`);
+    }
   }
 
   public valueOf(): ClusterValue {
@@ -114,9 +107,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       sourceListRefreshOnLoad: this.sourceListRefreshOnLoad,
       sourceListRefreshInterval: this.sourceListRefreshInterval,
       sourceReintrospectOnLoad: this.sourceReintrospectOnLoad,
-      sourceReintrospectInterval: this.sourceReintrospectInterval,
-      druidRequestDecorator: this.druidRequestDecorator,
-      druidRequestDecoratorModule: this.druidRequestDecoratorModule
+      sourceReintrospectInterval: this.sourceReintrospectInterval
     };
   }
 
@@ -130,7 +121,6 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
     js.sourceListRefreshInterval = this.sourceListRefreshInterval;
     js.sourceReintrospectOnLoad = this.sourceReintrospectOnLoad;
     js.sourceReintrospectInterval = this.sourceReintrospectInterval;
-    js.druidRequestDecorator = this.druidRequestDecorator;
     return js;
   }
 
@@ -150,12 +140,13 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       this.sourceListRefreshOnLoad === other.sourceListRefreshOnLoad &&
       this.sourceListRefreshInterval === other.sourceListRefreshInterval &&
       this.sourceReintrospectOnLoad === other.sourceReintrospectOnLoad &&
-      this.sourceReintrospectInterval === other.sourceReintrospectInterval &&
-      this.druidRequestDecorator === other.druidRequestDecorator;
+      this.sourceReintrospectInterval === other.sourceReintrospectInterval;
   }
 
-  getRequester(verbose = false): Requester.PlywoodRequester<any> {
+  public addRequester(): Cluster {
+    var value = this.valueOf();
 
+    return new Cluster(value);
   }
 
 }

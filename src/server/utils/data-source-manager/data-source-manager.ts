@@ -2,8 +2,7 @@ import * as Q from 'q';
 import { Duration, Timezone } from 'chronoshift';
 import { $, AttributeInfo, RefExpression, DruidExternal, helper } from 'plywood';
 import { makeUrlSafeName } from '../../../common/utils/general/general';
-import { ServerSettings, SourceListScan } from '../../models/server-settings/server-settings';
-import { DataSource, RefreshRule } from '../../../common/models/index';
+import { DataSource, RefreshRule, Cluster, SourceListScan  } from '../../../common/models/index';
 
 export interface DataSourceLoader {
   (dataSource: DataSource): Q.Promise<DataSource>;

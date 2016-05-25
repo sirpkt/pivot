@@ -2,10 +2,9 @@ require('./pivot-application.css');
 
 import * as React from 'react';
 import * as ReactCSSTransitionGroup from 'react-addons-css-transition-group';
-import * as Clipboard from 'clipboard';
+import { helper } from 'plywood';
 
-import { List } from 'immutable';
-import { DataSource, LinkViewConfig, LinkViewConfigJS, User, Customization} from '../../../common/models/index';
+import { DataSource, LinkViewConfig, AppSettings, User } from '../../../common/models/index';
 
 import { AboutModal } from '../about-modal/about-modal';
 import { SideDrawer } from '../side-drawer/side-drawer';
@@ -17,12 +16,10 @@ import { visualizations } from '../../visualizations/index';
 
 export interface PivotApplicationProps extends React.Props<any> {
   version: string;
-  dataSources: List<DataSource>;
-  linkViewConfig?: LinkViewConfigJS;
   user?: User;
   maxFilters?: number;
   maxSplits?: number;
-  customization?: Customization;
+  appSettings: AppSettings;
 }
 
 export interface PivotApplicationState {
@@ -63,12 +60,13 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
   }
 
   componentWillMount() {
-    var { dataSources, linkViewConfig } = this.props;
-    if (!dataSources.size) throw new Error('must have data sources');
+    var { appSettings } = this.props;
+    var { dataSources } = appSettings;
+    if (!dataSources.length) throw new Error('must have data sources');
 
     var hash = window.location.hash;
     var viewType = this.getViewTypeFromHash(hash);
-    var selectedDataSource = this.getDataSourceFromHash(dataSources, hash);
+    var selectedDataSource = this.getDataSourceFromHash(appSettings.dataSources, hash);
     var viewHash = this.getViewHashFromHash(hash);
 
     // If datasource does not exit bounce to home
@@ -77,16 +75,16 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
       viewType = HOME;
     }
 
-    if (viewType === HOME && dataSources.size === 1) {
+    if (viewType === HOME && dataSources.length === 1) {
       viewType = CUBE;
-      selectedDataSource = dataSources.first();
+      selectedDataSource = dataSources[0];
     }
 
     this.setState({
       viewType,
       viewHash,
       selectedDataSource,
-      linkViewConfig: linkViewConfig ? LinkViewConfig.fromJS(linkViewConfig, { dataSources, visualizations }) : null
+      linkViewConfig: appSettings.linkViewConfig ? appSettings.linkViewConfig.attachVisualizations(visualizations) : null
     });
   }
 
@@ -95,7 +93,6 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
 
     require.ensure(['clipboard'], (require) => {
       var Clipboard = require('clipboard');
-
       var clipboard = new Clipboard('.clipboard');
 
       clipboard.on('success', (e: any) => {
@@ -160,11 +157,11 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
     return CUBE;
   }
 
-  getDataSourceFromHash(dataSources: List<DataSource>, hash: string): DataSource {
+  getDataSourceFromHash(dataSources: DataSource[], hash: string): DataSource {
     // can change header from hash
     var parts = this.parseHash(hash);
     var dataSourceName = parts.shift();
-    return dataSources.find((ds) => ds.name === dataSourceName);
+    return helper.findByName(dataSources, dataSourceName);
   }
 
   getViewHashFromHash(hash: string): string {

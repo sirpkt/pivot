@@ -114,5 +114,11 @@ export class LinkItem implements Instance<LinkItemValue, LinkItemJS> {
       this.essence.equals(other.essence);
   }
 
+  public attachVisualizations(visualizations: Manifest[]): LinkItem {
+    var value = this.valueOf();
+    value.essence = value.essence.attachVisualizations(visualizations);
+    return new LinkItem(value);
+  }
+
 }
 check = LinkItem;

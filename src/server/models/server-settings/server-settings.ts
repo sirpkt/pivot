@@ -1,4 +1,14 @@
+import * as path from 'path';
 import { Class, Instance, isInstanceOf } from 'immutable-class';
+import { DruidRequestDecorator } from 'plywood-druid-requester';
+
+export interface RequestDecoratorFactoryOptions {
+  config: any;
+}
+
+export interface DruidRequestDecoratorModule {
+  druidRequestDecorator: (log: (line: string) => void, options: RequestDecoratorFactoryOptions) => DruidRequestDecorator;
+}
 
 export type Iframe = "allow" | "deny";
 
@@ -6,45 +16,73 @@ export interface ServerSettingsValue {
   port?: number;
   serverRoot?: string;
   pageMustLoadTimeout?: number;
-  druidRequestDecorator?: string;
   iframe?: Iframe;
+  druidRequestDecorator?: string;
+
+  druidRequestDecoratorModule?: DruidRequestDecoratorModule;
 }
 
 export interface ServerSettingsJS {
   port?: number;
   serverRoot?: string;
   pageMustLoadTimeout?: number;
-  druidRequestDecorator?: string;
   iframe?: Iframe;
+  druidRequestDecorator?: string;
+}
+
+function parseIntFromPossibleString(x: any) {
+  return typeof x === 'string' ? parseInt(x, 10) : x;
 }
 
 var check: Class<ServerSettingsValue, ServerSettingsJS>;
 export class ServerSettings implements Instance<ServerSettingsValue, ServerSettingsJS> {
   static DEFAULT_PORT = 9090;
   static DEFAULT_SERVER_ROOT = '/pivot';
+  static DEFAULT_PAGE_MUST_LOAD_TIMEOUT = 800;
   static DEFAULT_IFRAME: Iframe = "allow";
 
   static isServerSettings(candidate: any): candidate is ServerSettings {
     return isInstanceOf(candidate, ServerSettings);
   }
 
-  static fromJS(parameters: ServerSettingsJS): ServerSettings {
-    var { port } = parameters;
-    var value: ServerSettingsValue = {
-      port: typeof port === 'string' ? parseInt(port as any, 10) : port,
-      serverRoot: parameters.serverRoot,
-      pageMustLoadTimeout: parameters.pageMustLoadTimeout,
-      druidRequestDecorator: parameters.druidRequestDecorator,
-      iframe: parameters.iframe
-    };
-    return new ServerSettings(value);
+  static fromJS(parameters: ServerSettingsJS, configFileDir?: string): ServerSettings {
+    var {
+      port,
+      serverRoot,
+      pageMustLoadTimeout,
+      iframe,
+      druidRequestDecorator
+    } = parameters;
+
+    if (serverRoot[0] !== '/') serverRoot = '/' + serverRoot;
+
+    var druidRequestDecoratorModule: DruidRequestDecoratorModule = null;
+    if (configFileDir && druidRequestDecorator) {
+      druidRequestDecorator = path.resolve(configFileDir, druidRequestDecorator);
+      try {
+        druidRequestDecoratorModule = require(druidRequestDecorator);
+      } catch (e) {
+        throw new Error(`error loading druidRequestDecorator module: ${e.message}`);
+      }
+    }
+
+    return new ServerSettings({
+      port: parseIntFromPossibleString(port),
+      serverRoot,
+      pageMustLoadTimeout,
+      iframe,
+      druidRequestDecorator,
+      druidRequestDecoratorModule
+    });
   }
 
   public port: number;
   public serverRoot: string;
   public pageMustLoadTimeout: number;
-  public druidRequestDecorator: string;
   public iframe: Iframe;
+  public druidRequestDecorator: string;
+
+  public druidRequestDecoratorModule: DruidRequestDecoratorModule;
 
   constructor(parameters: ServerSettingsValue) {
     var port = parameters.port || ServerSettings.DEFAULT_PORT;
@@ -52,9 +90,11 @@ export class ServerSettings implements Instance<ServerSettingsValue, ServerSetti
     this.port = port;
 
     this.serverRoot = parameters.serverRoot || ServerSettings.DEFAULT_SERVER_ROOT;
-    this.pageMustLoadTimeout = parameters.pageMustLoadTimeout;
-    this.druidRequestDecorator = parameters.druidRequestDecorator;
+    this.pageMustLoadTimeout = parameters.pageMustLoadTimeout || ServerSettings.DEFAULT_PAGE_MUST_LOAD_TIMEOUT;
     this.iframe = parameters.iframe || ServerSettings.DEFAULT_IFRAME;
+    this.druidRequestDecorator = parameters.druidRequestDecorator;
+
+    this.druidRequestDecoratorModule = parameters.druidRequestDecoratorModule;
   }
 
   public valueOf(): ServerSettingsValue {
@@ -62,8 +102,9 @@ export class ServerSettings implements Instance<ServerSettingsValue, ServerSetti
       port: this.port,
       serverRoot: this.serverRoot,
       pageMustLoadTimeout: this.pageMustLoadTimeout,
+      iframe: this.iframe,
       druidRequestDecorator: this.druidRequestDecorator,
-      iframe: this.iframe
+      druidRequestDecoratorModule: this.druidRequestDecoratorModule
     };
   }
 
@@ -72,8 +113,8 @@ export class ServerSettings implements Instance<ServerSettingsValue, ServerSetti
     if (this.port !== ServerSettings.DEFAULT_PORT) js.port = this.port;
     if (this.serverRoot !== ServerSettings.DEFAULT_SERVER_ROOT) js.serverRoot = this.serverRoot;
     js.pageMustLoadTimeout = this.pageMustLoadTimeout;
-    js.druidRequestDecorator = this.druidRequestDecorator;
     js.iframe = this.iframe;
+    js.druidRequestDecorator = this.druidRequestDecorator;
     return js;
   }
 
@@ -90,8 +131,8 @@ export class ServerSettings implements Instance<ServerSettingsValue, ServerSetti
       this.port === other.port &&
       this.serverRoot === other.serverRoot &&
       this.pageMustLoadTimeout === other.pageMustLoadTimeout &&
-      this.druidRequestDecorator === other.druidRequestDecorator &&
-      this.iframe === other.iframe;
+      this.iframe === other.iframe &&
+      this.druidRequestDecorator === other.druidRequestDecorator;
   }
 
 }

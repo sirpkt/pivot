@@ -1,4 +1,5 @@
 import { Class, Instance, isInstanceOf, immutableArraysEqual, immutableEqual } from 'immutable-class';
+import { Executor } from 'plywood';
 import { Cluster, ClusterJS } from '../cluster/cluster';
 import { Customization, CustomizationJS } from '../customization/customization';
 import { DataSource, DataSourceJS } from  '../data-source/data-source';
@@ -78,6 +79,22 @@ export class AppSettings implements Instance<AppSettingsValue, AppSettingsJS> {
       immutableEqual(this.customization, other.customization) &&
       immutableArraysEqual(this.dataSources, other.dataSources) &&
       Boolean(this.linkViewConfig) === Boolean(other.linkViewConfig);
+  }
+
+  public toClientSettings(): AppSettings {
+    var value = this.valueOf();
+    value.dataSources = value.dataSources.map((ds) => ds.toClientDataSource());
+    return new AppSettings(value);
+  }
+
+  public attachExecutors(executorFactory: (dataSource: DataSource) => Executor): AppSettings {
+    var value = this.valueOf();
+    value.dataSources = value.dataSources.map((ds) => {
+      var executor = executorFactory(ds);
+      if (executor) ds = ds.attachExecutor(executor);
+      return ds;
+    });
+    return new AppSettings(value);
   }
 
 }

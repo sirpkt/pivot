@@ -2,11 +2,10 @@ import * as path from 'path';
 import * as Q from 'q';
 import * as nopt from 'nopt';
 import { DruidRequestDecorator } from 'plywood-druid-requester';
-import { AppSettings, AppSettingsJS, DataSource, DataSourceJS } from '../common/models/index';
+import { AppSettings, AppSettingsJS, DataSource, DataSourceJS, SourceListScan, Cluster } from '../common/models/index';
 import { dataSourceToYAML } from '../common/utils/yaml-helper/yaml-helper';
 import { ServerSettings } from './models/server-settings/server-settings';
-import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, dataSourceLoaderFactory, SourceListScan } from './utils/index';
-
+import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, dataSourceLoaderFactory } from './utils/index';
 
 
 function errorExit(message: string): void {
@@ -104,7 +103,7 @@ const DEFAULT_SETTINGS: any = {
   dataSources: []
 };
 
-var exampleConfig: PivotConfig = null;
+var exampleConfig: any = null;
 if (parsedArgs['example']) {
   delete parsedArgs['druid'];
   var example = parsedArgs['example'];
@@ -122,7 +121,7 @@ if (parsedArgs['example']) {
 
 var configFilePath = parsedArgs['config'];
 var configFileDir: string = null;
-var config: PivotConfig;
+var config: any;
 if (configFilePath) {
   configFileDir = path.dirname(configFilePath);
   try {
@@ -154,7 +153,7 @@ if (parsedArgs['druid']) {
   config.druidHost = parsedArgs['druid'];
 }
 
-var serverSettings = ServerSettings.fromJS(config);
+var serverSettings = ServerSettings.fromJS(config, configFileDir);
 var appSettings = AppSettings.fromJS(config);
 
 export const SERVER_SETTINGS = serverSettings;
@@ -164,23 +163,6 @@ export const APP_SETTINGS = appSettings;
 export const PRINT_CONFIG = Boolean(parsedArgs['print-config']);
 export const START_SERVER = !PRINT_CONFIG;
 export const VERBOSE = Boolean(parsedArgs['verbose'] || config.verbose);
-
-export const INTROSPECTION_STRATEGY = String(config.introspectionStrategy || 'segment-metadata-fallback');
-export const PAGE_MUST_LOAD_TIMEOUT = START_SERVER ? (parseInt(<any>config.pageMustLoadTimeout, 10) || 800) : 0;
-export const SOURCE_LIST_SCAN: SourceListScan = config.sourceListScan;
-
-export const SOURCE_LIST_REFRESH_ON_LOAD = START_SERVER ? Boolean(<any>config.sourceListRefreshOnLoad) : false;
-export const SOURCE_LIST_REFRESH_INTERVAL = START_SERVER ? (parseInt(<any>config.sourceListRefreshInterval, 10) || 15000) : 0;
-if (SOURCE_LIST_REFRESH_INTERVAL && SOURCE_LIST_REFRESH_INTERVAL < 1000) {
-  errorExit(`can not set sourceListRefreshInterval to < 1000 (is ${SOURCE_LIST_REFRESH_INTERVAL})`);
-}
-
-export const SOURCE_REINTROSPECT_ON_LOAD = START_SERVER ? Boolean(<any>config.sourceReintrospectOnLoad) : false;
-export const SOURCE_REINTROSPECT_INTERVAL = START_SERVER ? (parseInt(<any>config.sourceReintrospectInterval, 10) || 0) : 0;
-if (SOURCE_REINTROSPECT_INTERVAL && SOURCE_REINTROSPECT_INTERVAL < 1000) {
-  errorExit(`can not set sourceReintrospectInterval to < 1000 (is ${SOURCE_REINTROSPECT_INTERVAL})`);
-}
-
 
 var auth = config.auth;
 var authModule: any = null;
@@ -196,22 +178,6 @@ if (auth) {
 }
 export const AUTH = authModule;
 
-
-var druidRequestDecorator = config.druidRequestDecorator;
-var druidRequestDecoratorModule: DruidRequestDecoratorModule = null;
-if (druidRequestDecorator) {
-  druidRequestDecorator = path.resolve(configFileDir, druidRequestDecorator);
-  console.log(`Using druidRequestDecorator ${druidRequestDecorator}`);
-  try {
-    druidRequestDecoratorModule = require(druidRequestDecorator);
-  } catch (e) {
-    errorExit(`error loading druidRequestDecorator module: ${e.message}`);
-  }
-  if (typeof druidRequestDecoratorModule.druidRequestDecorator !== 'function') errorExit('Invalid druidRequestDecorator module');
-}
-export const DRUID_REQUEST_DECORATOR = druidRequestDecoratorModule;
-
-
 export const DATA_SOURCES: DataSource[] = (config.dataSources || []).map((dataSourceJS: DataSourceJS, i: number) => {
   if (typeof dataSourceJS !== 'object') errorExit(`DataSource ${i} is not valid`);
   var dataSourceName = dataSourceJS.name;
@@ -225,20 +191,21 @@ export const DATA_SOURCES: DataSource[] = (config.dataSources || []).map((dataSo
   }
 });
 
+var cluster = appSettings.clusters[0];
 
 var druidRequester: Requester.PlywoodRequester<any> = null;
-if (DRUID_HOST) {
+if (cluster) {
   var requestDecorator: DruidRequestDecorator = null;
-  if (druidRequestDecoratorModule) {
+  if (serverSettings.druidRequestDecoratorModule) {
     var logger = (str: string) => console.log(str);
-    requestDecorator = druidRequestDecoratorModule.druidRequestDecorator(logger, {
+    requestDecorator = serverSettings.druidRequestDecoratorModule.druidRequestDecorator(logger, {
       config
     });
   }
 
   druidRequester = properDruidRequesterFactory({
-    druidHost: DRUID_HOST,
-    timeout: TIMEOUT,
+    druidHost: cluster.host,
+    timeout: cluster.timeout,
     verbose: VERBOSE,
     concurrentLimit: 5,
     requestDecorator
@@ -254,14 +221,15 @@ if (!PRINT_CONFIG) {
 export const DATA_SOURCE_MANAGER: DataSourceManager = dataSourceManagerFactory({
   dataSources: DATA_SOURCES,
   druidRequester,
-  dataSourceLoader: dataSourceLoaderFactory(druidRequester, configDirectory, TIMEOUT, INTROSPECTION_STRATEGY),
+  dataSourceLoader: dataSourceLoaderFactory(druidRequester, configDirectory, cluster.timeout, cluster.introspectionStrategy),
 
-  pageMustLoadTimeout: PAGE_MUST_LOAD_TIMEOUT,
-  sourceListScan: SOURCE_LIST_SCAN,
-  sourceListRefreshOnLoad: SOURCE_LIST_REFRESH_ON_LOAD,
-  sourceListRefreshInterval: SOURCE_LIST_REFRESH_INTERVAL,
-  sourceReintrospectOnLoad: SOURCE_REINTROSPECT_ON_LOAD,
-  sourceReintrospectInterval: SOURCE_REINTROSPECT_INTERVAL,
+  pageMustLoadTimeout: serverSettings.pageMustLoadTimeout,
+
+  sourceListScan: cluster.sourceListScan,
+  sourceListRefreshOnLoad: cluster.sourceListRefreshOnLoad,
+  sourceListRefreshInterval: cluster.sourceListRefreshInterval,
+  sourceReintrospectOnLoad: cluster.sourceReintrospectOnLoad,
+  sourceReintrospectInterval: cluster.sourceReintrospectInterval,
 
   log: PRINT_CONFIG ? null : (line: string) => console.log(line)
 });
@@ -269,6 +237,7 @@ export const DATA_SOURCE_MANAGER: DataSourceManager = dataSourceManagerFactory({
 if (PRINT_CONFIG) {
   var withComments = Boolean(parsedArgs['with-comments']);
   var dataSourcesOnly = Boolean(parsedArgs['data-sources-only']);
+  var cluster = appSettings.clusters[0];
 
   DATA_SOURCE_MANAGER.getQueryableDataSources().then((dataSources) => {
     if (!dataSources.length) throw new Error('Could not find any data sources please verify network connectivity');
@@ -290,13 +259,13 @@ if (PRINT_CONFIG) {
       if (withComments) {
         lines.push("# The port on which the Pivot server will listen on");
       }
-      lines.push(`port: ${PORT}`, '');
+      lines.push(`port: ${serverSettings.port}`, '');
 
-      if (DRUID_HOST) {
+      if (cluster.host) {
         if (withComments) {
           lines.push("# A Druid broker node that can serve data (only used if you have Druid based data source)");
         }
-        lines.push(`druidHost: ${DRUID_HOST}`, '');
+        lines.push(`druidHost: ${cluster.host}`, '');
 
         if (withComments) {
           lines.push("# A timeout for the Druid queries in ms (default: 30000 = 30 seconds)");
@@ -304,11 +273,11 @@ if (PRINT_CONFIG) {
         }
       }
 
-      if (INTROSPECTION_STRATEGY !== 'segment-metadata-fallback') {
+      if (cluster.introspectionStrategy !== Cluster.DEFAULT_INTROSPECTION_STRATEGY) {
         if (withComments) {
           lines.push("# The introspection strategy for the Druid external");
         }
-        lines.push(`introspectionStrategy: ${INTROSPECTION_STRATEGY}`, '');
+        lines.push(`introspectionStrategy: ${cluster.introspectionStrategy}`, '');
       }
 
       if (withComments) {

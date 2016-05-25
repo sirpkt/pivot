@@ -1,7 +1,10 @@
+import { AppSettings } from '../common/models/index';
+
 export interface ViewOptions {
   version: string;
   title: string;
-  config?: any;
+  user?: any;
+  appSettings?: AppSettings;
 }
 
 function favicon(options: ViewOptions): string {
@@ -52,9 +55,9 @@ ${content}
   }
 
 export function pivotLayout(options: ViewOptions): string {
-  const { version, config } = options;
+  const { version, user, appSettings } = options;
   return layout(options, `<div class="app-container"></div>
-<script>var __CONFIG__ = ${JSON.stringify(config)};</script>
+<script>var __CONFIG__ = ${JSON.stringify({ user, appSettings })};</script>
 <script charset="UTF-8" src="/pivot.js?v=${version}"></script>`
   );
 }

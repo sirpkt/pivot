@@ -15,18 +15,12 @@ if (!WallTime.rules) {
 }
 
 import { PivotRequest } from './utils/index';
-import { VERSION, DATA_SOURCE_MANAGER, AUTH, SERVER_CONFIG, SERVER_ROOT } from './config';
+import { VERSION, DATA_SOURCE_MANAGER, AUTH, SERVER_SETTINGS } from './config';
 import * as plywoodRoutes from './routes/plywood/plywood';
 import * as plyqlRoutes from './routes/plyql/plyql';
 import * as pivotRoutes from './routes/pivot/pivot';
 import * as healthRoutes from './routes/health/health';
 import { errorLayout } from './views';
-
-var serverRoot = '/pivot';
-if (SERVER_ROOT) {
-  var serverRoot = SERVER_ROOT;
-  if (serverRoot[0] !== '/') serverRoot = '/' + serverRoot;
-}
 
 var app = express();
 app.disable('x-powered-by');
@@ -35,10 +29,10 @@ app.use(compress());
 app.use(logger('dev'));
 
 app.use('/', express.static(path.join(__dirname, '../../build/public')));
-app.use(serverRoot, express.static(path.join(__dirname, '../../build/public')));
+app.use(SERVER_SETTINGS.serverRoot, express.static(path.join(__dirname, '../../build/public')));
 
 app.use('/', express.static(path.join(__dirname, '../../assets')));
-app.use(serverRoot, express.static(path.join(__dirname, '../../assets')));
+app.use(SERVER_SETTINGS.serverRoot, express.static(path.join(__dirname, '../../assets')));
 
 if (AUTH) {
   app.use(AUTH.auth({
@@ -65,13 +59,13 @@ app.use(bodyParser.json());
 
 // Data routes
 app.use('/plywood', plywoodRoutes);
-app.use(serverRoot + '/plywood', plywoodRoutes);
+app.use(SERVER_SETTINGS.serverRoot + '/plywood', plywoodRoutes);
 
 app.use('/plyql', plyqlRoutes);
-app.use(serverRoot + '/plyql', plyqlRoutes);
+app.use(SERVER_SETTINGS.serverRoot + '/plyql', plyqlRoutes);
 
 // View routes
-if (SERVER_CONFIG.iframe === 'deny') {
+if (SERVER_SETTINGS.iframe === 'deny') {
   app.use((req: PivotRequest, res: Response, next: Function) => {
     res.setHeader("X-Frame-Options", "DENY");
     res.setHeader("Content-Security-Policy", "frame-ancestors 'none'");
@@ -80,10 +74,10 @@ if (SERVER_CONFIG.iframe === 'deny') {
 }
 
 app.use('/', pivotRoutes);
-app.use(serverRoot, pivotRoutes);
+app.use(SERVER_SETTINGS.serverRoot, pivotRoutes);
 
 app.use('/health', healthRoutes);
-app.use(serverRoot + '/health', healthRoutes);
+app.use(SERVER_SETTINGS.serverRoot + '/health', healthRoutes);
 
 // Catch 404 and redirect to /
 app.use((req: Request, res: Response, next: Function) => {
