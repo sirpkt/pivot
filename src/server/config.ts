@@ -2,10 +2,10 @@ import * as path from 'path';
 import * as Q from 'q';
 import * as nopt from 'nopt';
 import { DruidRequestDecorator } from 'plywood-druid-requester';
-import { AppSettings, AppSettingsJS, DataSource, DataSourceJS, SourceListScan, Cluster } from '../common/models/index';
+import { AppSettings, DataSource, DataSourceJS, SourceListScan, Cluster } from '../common/models/index';
 import { dataSourceToYAML } from '../common/utils/yaml-helper/yaml-helper';
 import { ServerSettings } from './models/server-settings/server-settings';
-import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, dataSourceLoaderFactory } from './utils/index';
+import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, dataSourceLoaderFactory, SettingsManager } from './utils/index';
 
 
 function errorExit(message: string): void {
@@ -154,10 +154,13 @@ if (parsedArgs['druid']) {
 }
 
 var serverSettings = ServerSettings.fromJS(config, configFileDir);
-var appSettings = AppSettings.fromJS(config);
 
 export const SERVER_SETTINGS = serverSettings;
-export const APP_SETTINGS = appSettings;
+export const SETTINGS_MANAGER = new SettingsManager({
+  location: 'local',
+  readOnly: true,
+  uri: configFilePath
+});
 
 
 export const PRINT_CONFIG = Boolean(parsedArgs['print-config']);
