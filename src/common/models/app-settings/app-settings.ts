@@ -27,11 +27,18 @@ export class AppSettings implements Instance<AppSettingsValue, AppSettingsJS> {
 
   static fromJS(parameters: AppSettingsJS): AppSettings {
     var value: AppSettingsValue = {
-      clusters: (parameters.clusters || [parameters as any]).map(cluster => Cluster.fromJS(cluster)),
       customization: Customization.fromJS(parameters.customization || {}),
       dataSources: (parameters.dataSources || []).map(dataSource => DataSource.fromJS(dataSource)),
       linkViewConfig: parameters.linkViewConfig ? LinkViewConfig.fromJS(parameters.linkViewConfig) : null
     };
+
+    if (parameters.clusters) {
+      value.clusters = parameters.clusters.map(cluster => Cluster.fromJS(cluster));
+    } else {
+      (parameters as any).clusterName = 'druid';
+      value.clusters = [Cluster.fromJS(parameters as any)];
+    }
+
     return new AppSettings(value);
   }
 

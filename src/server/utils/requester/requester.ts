@@ -4,8 +4,8 @@ import { mySqlRequesterFactory } from 'plywood-mysql-requester';
 import { postgresRequesterFactory } from 'plywood-postgres-requester';
 
 export interface ProperRequesterOptions {
-  type?: 'druid' | 'mysql' | 'postgres';
-  host?: string;
+  type: 'druid' | 'mysql' | 'postgres';
+  host: string;
   retry?: number;
   timeout?: number;
   verbose?: boolean;

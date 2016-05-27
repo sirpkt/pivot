@@ -3,6 +3,7 @@ import { Class, Instance, isInstanceOf } from 'immutable-class';
 export type SourceListScan = "disable" | "auto";
 
 export interface ClusterValue {
+  name: string;
   host?: string;
   version?: string;
   timeout?: number;
@@ -15,6 +16,7 @@ export interface ClusterValue {
 }
 
 export interface ClusterJS {
+  name: string;
   host?: string;
   version?: string;
   timeout?: number;
@@ -53,6 +55,8 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       sourceReintrospectInterval
     } = parameters;
 
+    name = name || (parameters as any).clusterName;
+
     // host might be written as druidHost or brokerHost
     host = host || (parameters as any).druidHost || (parameters as any).brokerHost;
 
@@ -71,6 +75,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   }
 
 
+  public name: string;
   public host: string;
   public version: string;
   public timeout: number;
@@ -82,9 +87,11 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   public sourceReintrospectInterval: number;
 
   constructor(parameters: ClusterValue) {
-    var host = parameters.host;
-    if (typeof host !== 'string') throw new Error('must have host');
-    this.host = host;
+    var name = parameters.name;
+    if (typeof name !== 'string') throw new Error('must have name');
+    this.name = name;
+
+    this.host = parameters.host;
 
     this.version = parameters.version;
 
@@ -107,6 +114,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
   public valueOf(): ClusterValue {
     return {
+      name: this.name,
       host: this.host,
       version: this.version,
       timeout: this.timeout,
@@ -121,6 +129,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
   public toJS(): ClusterJS {
     var js: ClusterJS = {};
+    js.name = this.name;
     js.host = this.host;
     js.version = this.version;
     js.timeout = this.timeout;
@@ -143,6 +152,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
   public equals(other: Cluster): boolean {
     return Cluster.isCluster(other) &&
+      this.name === other.name &&
       this.host === other.host &&
       this.version === other.version &&
       this.introspectionStrategy === other.introspectionStrategy &&
@@ -154,7 +164,9 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   }
 
   public toClientCluster(): Cluster {
-    // name only
+    return new Cluster({
+      name: this.name
+    });
   }
 
 }
