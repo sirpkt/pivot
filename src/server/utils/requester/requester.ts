@@ -1,31 +1,63 @@
 import { $, helper } from 'plywood';
 import { druidRequesterFactory, DruidRequestDecorator } from 'plywood-druid-requester';
 import { mySqlRequesterFactory } from 'plywood-mysql-requester';
+import { postgresRequesterFactory } from 'plywood-postgres-requester';
 
-export interface ProperDruidRequesterOptions {
-  druidHost?: string;
+export interface ProperRequesterOptions {
+  type?: 'druid' | 'mysql' | 'postgres';
+  host?: string;
   retry?: number;
   timeout?: number;
   verbose?: boolean;
   concurrentLimit?: number;
-  requestDecorator?: DruidRequestDecorator;
+
+  // Specific to type 'druid'
+  druidRequestDecorator?: DruidRequestDecorator;
+
+  // Specific to SQL drivers
+  database?: string;
+  user?: string;
+  password?: string;
 }
 
-export function properDruidRequesterFactory(options: ProperDruidRequesterOptions): Requester.PlywoodRequester<any> {
+export function properRequesterFactory(options: ProperRequesterOptions): Requester.PlywoodRequester<any> {
   var {
-    druidHost,
+    host,
     retry,
     timeout,
     verbose,
-    concurrentLimit,
-    requestDecorator
+    concurrentLimit
   } = options;
 
-  var druidRequester = druidRequesterFactory({
-    host: druidHost,
-    timeout: timeout || 30000,
-    requestDecorator
-  });
+  var requester: Requester.PlywoodRequester<any>;
+
+  switch (type) {
+    case 'druid':
+      requester = druidRequesterFactory({
+        host,
+        timeout: timeout || 30000,
+        druidRequestDecorator: options.druidRequestDecorator
+      });
+      break;
+
+    case 'mysql':
+      requester = mySqlRequesterFactory({
+        host,
+        database: options.database,
+        user: options.user,
+        password: options.password
+      });
+      break;
+
+    case 'postgres':
+      requester = postgresRequesterFactory({
+        host,
+        database: options.database,
+        user: options.user,
+        password: options.password
+      });
+      break;
+  }
 
   if (retry) {
     druidRequester = helper.retryRequesterFactory({

@@ -4,6 +4,7 @@ export type SourceListScan = "disable" | "auto";
 
 export interface ClusterValue {
   host?: string;
+  version?: string;
   timeout?: number;
   introspectionStrategy?: string;
   sourceListScan?: SourceListScan;
@@ -15,6 +16,7 @@ export interface ClusterValue {
 
 export interface ClusterJS {
   host?: string;
+  version?: string;
   timeout?: number;
   introspectionStrategy?: string;
   sourceListScan?: SourceListScan;
@@ -41,6 +43,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   static fromJS(parameters: ClusterJS): Cluster {
     var {
       host,
+      version,
       timeout,
       introspectionStrategy,
       sourceListScan,
@@ -55,6 +58,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
     var value: ClusterValue = {
       host,
+      version,
       timeout: parseIntFromPossibleString(timeout),
       introspectionStrategy: introspectionStrategy,
       sourceListScan: sourceListScan,
@@ -68,6 +72,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
 
   public host: string;
+  public version: string;
   public timeout: number;
   public introspectionStrategy: string;
   public sourceListScan: SourceListScan;
@@ -80,6 +85,8 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
     var host = parameters.host;
     if (typeof host !== 'string') throw new Error('must have host');
     this.host = host;
+
+    this.version = parameters.version;
 
     this.timeout = parameters.timeout || Cluster.DEFAULT_TIMEOUT;
     this.introspectionStrategy = parameters.introspectionStrategy || Cluster.DEFAULT_INTROSPECTION_STRATEGY;
@@ -101,6 +108,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   public valueOf(): ClusterValue {
     return {
       host: this.host,
+      version: this.version,
       timeout: this.timeout,
       introspectionStrategy: this.introspectionStrategy,
       sourceListScan: this.sourceListScan,
@@ -114,6 +122,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   public toJS(): ClusterJS {
     var js: ClusterJS = {};
     js.host = this.host;
+    js.version = this.version;
     js.timeout = this.timeout;
     js.introspectionStrategy = this.introspectionStrategy;
     js.sourceListScan = this.sourceListScan;
@@ -135,6 +144,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   public equals(other: Cluster): boolean {
     return Cluster.isCluster(other) &&
       this.host === other.host &&
+      this.version === other.version &&
       this.introspectionStrategy === other.introspectionStrategy &&
       this.sourceListScan === other.sourceListScan &&
       this.sourceListRefreshOnLoad === other.sourceListRefreshOnLoad &&
@@ -143,10 +153,8 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       this.sourceReintrospectInterval === other.sourceReintrospectInterval;
   }
 
-  public addRequester(): Cluster {
-    var value = this.valueOf();
-
-    return new Cluster(value);
+  public toClientCluster(): Cluster {
+    // name only
   }
 
 }

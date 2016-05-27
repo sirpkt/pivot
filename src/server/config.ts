@@ -194,26 +194,6 @@ export const DATA_SOURCES: DataSource[] = (config.dataSources || []).map((dataSo
   }
 });
 
-var cluster = appSettings.clusters[0];
-
-var druidRequester: Requester.PlywoodRequester<any> = null;
-if (cluster) {
-  var requestDecorator: DruidRequestDecorator = null;
-  if (serverSettings.druidRequestDecoratorModule) {
-    var logger = (str: string) => console.log(str);
-    requestDecorator = serverSettings.druidRequestDecoratorModule.druidRequestDecorator(logger, {
-      config
-    });
-  }
-
-  druidRequester = properDruidRequesterFactory({
-    druidHost: cluster.host,
-    timeout: cluster.timeout,
-    verbose: VERBOSE,
-    concurrentLimit: 5,
-    requestDecorator
-  });
-}
 
 var configDirectory = configFileDir || path.join(__dirname, '../..');
 
