@@ -47,7 +47,7 @@ function makeNumberBuckets(centerAround: number, count: number, coarse?: boolean
 
 function makeNumberBucketsSimple() {
   var granularities: Granularity[] = [];
-  for (var i = -2; i < 3; i++) {
+  for (var i = 3; i > -2; i--) {
     granularities.push(granularityFromJS(Math.pow(10, i)));
   }
   return granularities;
@@ -117,7 +117,7 @@ export class NumberHelper {
   static defaultGranularity = granularityFromJS(10);
 
   static checkers = makeNumberBucketsSimple().map((v: NumberBucketAction) => makeCheckpoint(v.size, v));
-  static defaultGranularities = NumberHelper.checkers.map((c: any) => { return granularityFromJS(c.checkPoint); });
+  static defaultGranularities = NumberHelper.checkers.map((c: any) => { return granularityFromJS(c.checkPoint); }).reverse();
   static coarseGranularities: Granularity[] = null;
   static coarseCheckers: Checker[] = null;
 

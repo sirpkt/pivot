@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { immutableArraysEqual } from "immutable-class";
 import { Duration } from "chronoshift";
 import { Granularity, granularityFromJS, granularityEquals, granularityToString, updateBucketSize, getGranularities, getDefaultGranularityForKind, getBestBucketUnitForRange } from "./granularity";
-import { TimeBucketAction, NumberBucketAction, TimeRange } from "plywood";
+import { TimeBucketAction, NumberBucketAction, TimeRange, NumberRange } from "plywood";
 
 var { WallTime } = require('chronoshift');
 if (!WallTime.rules) {
@@ -220,7 +220,7 @@ describe('Granularity', () => {
 
   it('getGranularities appropriately for number', () => {
     var defaults = getGranularities('number');
-    var expectedDefaults = [0.01, 0.1, 1, 10, 100].map(granularityFromJS);
+    var expectedDefaults = [0.1, 1, 10, 100, 1000].map(granularityFromJS);
 
     expect(immutableArraysEqual(defaults, expectedDefaults), 'number defaults are returned').to.equal(true);
 
@@ -307,7 +307,7 @@ describe('Granularity', () => {
 
   });
 
-  it('getsBestBucketUnit appropriately for time defaults with bucketing and custom granularities', () => {
+  it('getsBestBucketUnit appropriately for time with bucketing and custom granularities', () => {
     var sixHours = 'PT6H';
     var oneHour = 'PT1H';
     var week = 'P1W';
@@ -324,6 +324,21 @@ describe('Granularity', () => {
 
     var fortyFiveMin = new TimeRange({ start: new Date('1995-02-24T00:00:00.000Z'), end: new Date('1995-02-24T00:45:00.000Z') });
     expect(getBestBucketUnitForRange(fortyFiveMin, false, null, customs).toString()).to.equal(oneHour);
+
+  });
+
+  it('getsBestBucketUnit appropriately for number defaults with bucketing and custom granularities', () => {
+    var ten = new NumberRange({ start: 0, end: 10 });
+    var thirtyOne = new NumberRange({ start: 0, end: 31 });
+    var hundred = new NumberRange({ start: 0, end: 100 });
+
+    expect(getBestBucketUnitForRange(ten, false)).to.equal(1);
+    expect(getBestBucketUnitForRange(thirtyOne, false)).to.equal(10);
+    expect(getBestBucketUnitForRange(hundred, false)).to.equal(10);
+    expect(getBestBucketUnitForRange(hundred, false, granularityFromJS(50))).to.equal(50);
+
+    var customs = [-5, 0.25, 0.5, 0.78, 5].map(granularityFromJS);
+    expect(getBestBucketUnitForRange(ten, false, null, customs)).to.equal(5);
 
   });
 
