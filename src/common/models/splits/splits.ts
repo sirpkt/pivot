@@ -182,7 +182,7 @@ export class Splits implements Instance<SplitsValue, SplitsJS> {
 
       } else if (splitKind === 'number') {
         return splitCombine.changeBucketAction(new NumberBucketAction({
-          size: extent ? (getBestBucketUnitForRange(extent, false, splitDimension.bucketedBy) as number) :
+          size: extent ? (getBestBucketUnitForRange(extent, false, splitDimension.bucketedBy, splitDimension.granularities) as number) :
             (getDefaultGranularityForKind('number', splitDimension.bucketedBy, splitDimension.granularities) as NumberBucketAction).size
         }));
 
