@@ -196,7 +196,8 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
       var relativeStart = this.valueToRelativePosition(start);
       var adjustedRightBound = getAdjustedEnd(rightBound);
 
-      var positionEnd = clamp(relativeEnd, 0, adjustedRightBound);
+      var positionEnd = clamp(relativeEnd, getAdjustedStart(relativeStart), adjustedRightBound);
+
       var positionStart = start ? clamp(relativeStart, 0, getAdjustedEnd(positionEnd)) : 0;
 
       var rangeBarLeft = { left: 0, width: positionStart };
