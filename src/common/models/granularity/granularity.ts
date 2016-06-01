@@ -3,7 +3,7 @@ import { day, hour, minute } from 'chronoshift';
 
 import {
   hasOwnProperty, findFirstBiggerIndex, findExactIndex, findMaxValueIndex, findMinValueIndex,
-  toSignificantDigits, getNumberOfWholeDigits, getNumberOfDigits
+  toSignificantDigits, getNumberOfWholeDigits, findBiggerClosestToIdeal
 } from '../../../common/utils/general/general';
 
 const MENU_LENGTH = 5;
@@ -29,6 +29,7 @@ function makeNumberBuckets(centerAround: number, count: number, coarse?: boolean
   var granularities: Granularity[] = [];
   var logTen = Math.log(centerAround) / Math.LN10;
   var digits = getNumberOfWholeDigits(centerAround);
+
   while (granularities.length <= count) {
     if (!coarse) {
       var halfStep = toSignificantDigits(5 * Math.pow(10, logTen - 1), digits);
@@ -40,6 +41,15 @@ function makeNumberBuckets(centerAround: number, count: number, coarse?: boolean
     logTen++;
   }
 
+  return granularities;
+}
+
+
+function makeNumberBucketsSimple() {
+  var granularities: Granularity[] = [];
+  for (var i = -2; i < 3; i++) {
+    granularities.push(granularityFromJS(Math.pow(10, i)));
+  }
   return granularities;
 }
 
@@ -106,12 +116,12 @@ export class NumberHelper {
   static minGranularity = granularityFromJS(1);
   static defaultGranularity = granularityFromJS(10);
 
-  static checkers = makeNumberBuckets(1, MENU_LENGTH).map((v: NumberBucketAction) => makeCheckpoint(v.size, v));
+  static checkers = makeNumberBucketsSimple().map((v: NumberBucketAction) => makeCheckpoint(v.size, v));
   static defaultGranularities = NumberHelper.checkers.map((c: any) => { return granularityFromJS(c.checkPoint); });
   static coarseGranularities: Granularity[] = null;
   static coarseCheckers: Checker[] = null;
 
-  static supportedGranularities = function(bucketedBy: Granularity) {
+  static supportedGranularities = (bucketedBy: Granularity) => {
     return makeNumberBuckets(getBucketSize(bucketedBy), 10);
   };
 }
@@ -244,8 +254,9 @@ export function getGranularities(kind: DimensionKind, bucketedBy?: Granularity, 
   return generateGranularitySet(allGranularities, bucketedBy);
 }
 
-export function getDefaultGranularityForKind(kind: DimensionKind, bucketedBy?: Granularity): Granularity {
+export function getDefaultGranularityForKind(kind: DimensionKind, bucketedBy?: Granularity, customGranularities?: Granularity[]): Granularity {
   if (bucketedBy) return bucketedBy;
+  if (customGranularities)return customGranularities[2];
   return getHelperForKind(kind).defaultGranularity;
 }
 
@@ -255,6 +266,7 @@ export function getBestGranularityForRange(inputRange: PlywoodRange, bigChecker:
 
 export function getBestBucketUnitForRange(inputRange: PlywoodRange, bigChecker: boolean, bucketedBy?: Granularity, customGranularities?: Granularity[]): BucketUnit {
   var rangeLength = endValue(inputRange) - startValue(inputRange);
+
   var helper = getHelperForRange(inputRange);
   var bucketLength = bucketedBy ? getBucketSize(bucketedBy) : 0;
   var checkPoints = bigChecker && helper.coarseCheckers ? helper.coarseCheckers : helper.checkers;
@@ -266,10 +278,10 @@ export function getBestBucketUnitForRange(inputRange: PlywoodRange, bigChecker: 
 
       if (bucketedBy) {
         var granArray = customGranularities || getGranularities(helper.dimensionKind, bucketedBy);
-        var biggerThanBucketed =  findFirstBiggerIndex(granArray, bucketedBy, getBucketSize);
+        var closest = findBiggerClosestToIdeal(granArray, bucketedBy, returnVal, getBucketSize);
         // this could happen if bucketedBy were very big or if custom granularities are smaller than maker action
-        if (biggerThanBucketed === -1) return getBucketUnit(helper.defaultGranularity);
-        return getBucketUnit(granArray[biggerThanBucketed]);
+        if (closest === null) return getBucketUnit(helper.defaultGranularity);
+        return getBucketUnit(closest);
       } else {
         if (!customGranularities) return getBucketUnit(returnVal);
         return getBucketUnit(findBestMatch(customGranularities, returnVal));

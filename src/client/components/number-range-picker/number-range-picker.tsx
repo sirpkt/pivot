@@ -6,7 +6,7 @@ import * as ReactDOM from 'react-dom';
 import { $, Dataset, ply } from 'plywood';
 
 import { Essence, Dimension } from '../../../common/models/index';
-import { toSignificantDigits, getNumberOfWholeDigits } from '../../../common/utils/general/general';
+import { toSignificantDigits, getNumberOfWholeDigits, digitsToHumanFriendly } from '../../../common/utils/general/general';
 
 
 import { getXFromEvent, clamp } from '../../utils/dom/dom';
@@ -30,7 +30,6 @@ function getAdjustedEnd(end: number) {
 
 function getNumberOfDigitsToShow(n: number) {
   var totalDigits = getNumberOfWholeDigits(n / GRANULARITY_IN_BAR);
-  console.log(totalDigits);
   return totalDigits > 3 ? Math.min(totalDigits, 4) : 3;
 }
 
@@ -121,7 +120,11 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
     const { step, min, max, rightBound } = this.state;
     if (position === 0) return minToAny();
     if (position === rightBound) return maxToAny();
-    return (toSignificantDigits(position * step, getNumberOfDigitsToShow(max - min)));
+
+    var range = max - min !== 0 ? max - min : Math.abs(max);
+    var toSignificant = toSignificantDigits(position * step, getNumberOfDigitsToShow(range));
+    return digitsToHumanFriendly(toSignificant, range);
+
   }
 
   valueToRelativePosition(value: number) {

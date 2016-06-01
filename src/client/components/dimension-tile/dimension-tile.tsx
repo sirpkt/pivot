@@ -110,7 +110,7 @@ export class DimensionTile extends React.Component<DimensionTileProps, Dimension
           var range = dimension.kind === 'time' ? essence.evaluateSelection(filterSelection) : filterSelection.getLiteralValue().extent();
           selectedGranularity = getBestGranularityForRange(range, true, dimension.bucketedBy, dimension.granularities);
         } else {
-          selectedGranularity = getDefaultGranularityForKind(dimension.kind as DimensionKind, dimension.bucketedBy);
+          selectedGranularity = getDefaultGranularityForKind(dimension.kind as DimensionKind, dimension.bucketedBy, dimension.granularities);
         }
       }
 

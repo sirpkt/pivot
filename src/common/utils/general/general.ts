@@ -77,13 +77,19 @@ export function arraySum(inputArray: number[]) {
   }, 0);
 }
 
-export function findFirstBiggerIndex<T>(array: T[], granularityToFind: T, valueOf: (input: T) => number) {
-  if (!granularityToFind) return -1;
-  return List(array).findIndex(g => valueOf(g) > valueOf(granularityToFind));
+export function findFirstBiggerIndex<T>(array: T[], elementToFind: T, valueOf: (input: T) => number) {
+  if (!elementToFind) return -1;
+  return List(array).findIndex(g => valueOf(g) > valueOf(elementToFind));
 }
 
-export function findExactIndex<T>(array: T[], granularityToFind: T, valueOf: (input: T) => number) {
-  return List(array).findIndex(g => valueOf(g) === valueOf(granularityToFind));
+export function findBiggerClosestToIdeal<T>(array: T[], elementToFind: T, ideal: T, valueOf: (input: T) => number) {
+  var biggerOrEqualIndex = List(array).findIndex(g => valueOf(g) >= valueOf(elementToFind));
+  var biggerArrayOrEqual = array.slice(biggerOrEqualIndex);
+  return biggerArrayOrEqual.reduce((pV, cV, i, arr) => Math.abs(valueOf(pV) - valueOf(ideal)) < Math.abs(valueOf(cV) - valueOf(ideal)) ? pV : cV);
+}
+
+export function findExactIndex<T>(array: T[], elementToFind: T, valueOf: (input: T) => number) {
+  return List(array).findIndex(g => valueOf(g) === valueOf(elementToFind));
 }
 
 export function findMaxValueIndex<T>(array: T[], valueOf: (input: T) => number) {
@@ -94,15 +100,41 @@ export function findMinValueIndex<T>(array: T[], valueOf: (input: T) => number) 
   return array.reduce((currMax, cV, cIdx, arr) => valueOf(cV) < valueOf(arr[currMax]) ? cIdx : currMax, 0);
 }
 
+function log10(n: number) {
+  return Math.log(n) * Math.LOG10E;
+}
+
 export function toSignificantDigits(n: number, digits: number) {
   var multiplier = Math.pow(10, digits - Math.floor(Math.log(n) / Math.LN10) - 1);
   return Math.round(n * multiplier) / multiplier;
 }
 
 export function getNumberOfWholeDigits(n: number) {
-  return Math.floor(Math.log(n) / Math.log(10)) + 1;
+  return Math.max(Math.floor(log10(Math.abs(n))), 0) + 1;
 }
 
-export function getNumberOfDigits(x: number) {
-  return String(x).replace(/\./, '').length;
+export function digitsToHumanFriendly(value: number, range: number) {
+  var rangeWholeDigits = getNumberOfWholeDigits(range);
+  var valueWholeDigits = getNumberOfWholeDigits(value);
+
+  var countZero = getCountNonZeroDigits(range);
+  var trailingZerosRange = rangeWholeDigits - countZero;
+  var trailingZerosValue = valueWholeDigits - getCountNonZeroDigits(value);
+
+  if (trailingZerosValue < trailingZerosRange) {
+    return Math.round(value / Math.pow(10, trailingZerosRange)) * Math.pow(10, trailingZerosRange);
+  }
+
+  if (valueWholeDigits < rangeWholeDigits) {
+    if (valueWholeDigits === 1) return Math.round(value);
+    var diff = rangeWholeDigits - valueWholeDigits - 1;
+    return Math.round(value / Math.pow(10, diff)) * Math.pow(10, diff);
+  }
+
+  return value;
+}
+
+function getCountNonZeroDigits(n: number) {
+  while (n % 10 === 0) n = n / 10;
+  return getNumberOfWholeDigits(n);
 }
