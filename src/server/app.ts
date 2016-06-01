@@ -36,21 +36,12 @@ app.use(SERVER_SETTINGS.serverRoot, express.static(path.join(__dirname, '../../a
 
 if (AUTH) {
   app.use(AUTH.auth({
-    version: VERSION,
-    dataSourceManager: DATA_SOURCE_MANAGER
+    version: VERSION
   }));
-
-  app.use((req: PivotRequest, res: Response, next: Function) => {
-    if (!req.dataSourceManager) {
-      return next(new Error('no dataSourceManager'));
-    }
-    next();
-  });
 
 } else {
   app.use((req: PivotRequest, res: Response, next: Function) => {
     req.user = null;
-    req.dataSourceManager = DATA_SOURCE_MANAGER;
     next();
   });
 }

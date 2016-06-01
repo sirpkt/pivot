@@ -26,7 +26,7 @@ export interface LinkItemJS {
 
 export interface LinkItemContext {
   dataSources: List<DataSource>;
-  visualizations: List<Manifest>;
+  visualizations: Manifest[];
 }
 
 var check: Class<LinkItemValue, LinkItemJS>;

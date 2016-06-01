@@ -1,5 +1,5 @@
 import { Class, Instance, isInstanceOf, immutableArraysEqual, immutableEqual } from 'immutable-class';
-import { Executor } from 'plywood';
+import { Executor, helper } from 'plywood';
 import { Cluster, ClusterJS } from '../cluster/cluster';
 import { Customization, CustomizationJS } from '../customization/customization';
 import { DataSource, DataSourceJS } from  '../data-source/data-source';
@@ -48,10 +48,24 @@ export class AppSettings implements Instance<AppSettingsValue, AppSettingsJS> {
   public linkViewConfig: LinkViewConfig;
 
   constructor(parameters: AppSettingsValue) {
-    this.clusters = parameters.clusters;
-    this.customization = parameters.customization;
-    this.dataSources = parameters.dataSources;
-    this.linkViewConfig = parameters.linkViewConfig;
+    const {
+      clusters,
+      customization,
+      dataSources,
+      linkViewConfig
+    } = parameters;
+
+    for (var dataSource of dataSources) {
+      if (dataSource.engine === 'native') continue;
+      if (!helper.findByName(clusters, dataSource.engine)) {
+        throw new Error(`data source ${dataSource.name} refers to an unknown cluster ${dataSource.engine}`);
+      }
+    }
+
+    this.clusters = clusters;
+    this.customization = customization;
+    this.dataSources = dataSources;
+    this.linkViewConfig = linkViewConfig;
   }
 
   public valueOf(): AppSettingsValue {
@@ -92,6 +106,20 @@ export class AppSettings implements Instance<AppSettingsValue, AppSettingsJS> {
     var value = this.valueOf();
     value.clusters = value.clusters.map((ds) => ds.toClientCluster());
     value.dataSources = value.dataSources.map((ds) => ds.toClientDataSource());
+    return new AppSettings(value);
+  }
+
+  public getDataSourcesForCluster(clusterName: string): DataSource[] {
+    return this.dataSources.filter(dataSource => dataSource.engine === clusterName);
+  }
+
+  public getDataSource(dataSourceName: string): DataSource {
+    return helper.findByName(this.dataSources, dataSourceName);
+  }
+
+  public addOrUpdateDataSource(dataSource: DataSource): AppSettings {
+    var value = this.valueOf();
+    value.dataSources = helper.overrideByName(value.dataSources, dataSource);
     return new AppSettings(value);
   }
 

@@ -1,4 +1,7 @@
 import { Class, Instance, isInstanceOf } from 'immutable-class';
+import { External, ExternalValue, AttributeInfo } from 'plywood';
+import { DataSource } from '../data-source/data-source';
+import { RefreshRule } from '../refresh-rule/refresh-rule';
 
 export type SourceListScan = "disable" | "auto";
 
@@ -55,12 +58,13 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
       sourceReintrospectInterval
     } = parameters;
 
-    name = name || (parameters as any).clusterName;
+    name = name || (parameters as any).clusterName || 'druid';
 
     // host might be written as druidHost or brokerHost
     host = host || (parameters as any).druidHost || (parameters as any).brokerHost;
 
     var value: ClusterValue = {
+      name,
       host,
       version,
       timeout: parseIntFromPossibleString(timeout),
@@ -89,6 +93,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   constructor(parameters: ClusterValue) {
     var name = parameters.name;
     if (typeof name !== 'string') throw new Error('must have name');
+    if (name === 'native') throw new Error("cluster can not be called 'native'");
     this.name = name;
 
     this.host = parameters.host;
@@ -128,8 +133,9 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
   }
 
   public toJS(): ClusterJS {
-    var js: ClusterJS = {};
-    js.name = this.name;
+    var js: ClusterJS = {
+      name: this.name
+    };
     js.host = this.host;
     js.version = this.version;
     js.timeout = this.timeout;
@@ -167,6 +173,61 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
     return new Cluster({
       name: this.name
     });
+  }
+
+  public makeExternalFromSourceName(source: string, version?: string): External {
+    return External.fromValue({
+      engine: 'druid',
+      dataSource: source,
+      version: version,
+      allowSelectQueries: true,
+      allowEternity: false
+    });
+  }
+
+  public makeExternalFromDataSource(dataSource: DataSource, version?: string): External {
+    var context = {
+      xDataSource: dataSource.name, // For now
+      timeout: this.timeout
+    };
+
+    var externalValue: ExternalValue = {
+      engine: 'druid',
+      suppress: true,
+      dataSource: dataSource.source,
+      version: version,
+      rollup: dataSource.rollup,
+      timeAttribute: dataSource.timeAttribute.name,
+      derivedAttributes: dataSource.derivedAttributes,
+      customAggregations: dataSource.options.customAggregations,
+      introspectionStrategy: this.introspectionStrategy,
+      filter: dataSource.subsetFilter,
+      allowSelectQueries: true,
+      context
+    };
+
+    if (dataSource.introspection === 'none') {
+      externalValue.attributes = AttributeInfo.override(dataSource.deduceAttributes(), dataSource.attributeOverrides);
+      externalValue.derivedAttributes = dataSource.derivedAttributes;
+    } else {
+      // ToDo: else if (we know that it will GET introspect) and there are no overrides apply special attributes as overrides
+      externalValue.attributeOverrides = dataSource.attributeOverrides;
+    }
+
+    return External.fromValue(externalValue);
+  }
+
+  public makeDataSourceFromExternal(external: External): DataSource {
+    var dataSourceName = (external as any).context.xDataSource;
+
+    var dataSource = DataSource.fromJS({
+      name: dataSourceName,
+      engine: 'druid',
+      source: (external as any).dataSource, // ToDo: !!!
+      refreshRule: RefreshRule.query().toJS()
+    });
+
+    return dataSource.updateWithExternal(external);
   }
 
 }

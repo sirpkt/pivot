@@ -124,7 +124,7 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
   }
 
   hashToState(hash: string) {
-    const { dataSources } = this.props;
+    const { dataSources } = this.props.appSettings;
     var viewType = this.getViewTypeFromHash(hash);
     var viewHash = this.getViewHashFromHash(hash);
     var newState: PivotApplicationState = {
@@ -134,7 +134,7 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
 
     if (viewType === CUBE) {
       var dataSource = this.getDataSourceFromHash(dataSources, hash);
-      if (!dataSource) dataSource = dataSources.first();
+      if (!dataSource) dataSource = dataSources[0];
       newState.selectedDataSource = dataSource;
     } else {
       newState.selectedDataSource = null;
@@ -150,7 +150,7 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
   }
 
   getViewTypeFromHash(hash: string): ViewType {
-    const { linkViewConfig } = this.props;
+    const { linkViewConfig } = this.props.appSettings;
     var viewType = this.parseHash(hash)[0];
     if (!viewType || viewType === HOME) return linkViewConfig ? LINK : HOME;
     if (linkViewConfig && viewType === LINK) return LINK;
@@ -238,7 +238,8 @@ export class PivotApplication extends React.Component<PivotApplicationProps, Piv
   }
 
   render() {
-    var { dataSources, maxFilters, maxSplits, user, customization } = this.props;
+    var { maxFilters, maxSplits, user, appSettings } = this.props;
+    var { dataSources, customization } = appSettings;
     var { viewType, viewHash, selectedDataSource, ReactCSSTransitionGroupAsync, drawerOpen, SideDrawerAsync, linkViewConfig } = this.state;
     var sideDrawer: JSX.Element = null;
     if (drawerOpen && SideDrawerAsync) {

@@ -22,6 +22,7 @@ export interface ProperRequesterOptions {
 
 export function properRequesterFactory(options: ProperRequesterOptions): Requester.PlywoodRequester<any> {
   var {
+    type,
     host,
     retry,
     timeout,
@@ -36,7 +37,7 @@ export function properRequesterFactory(options: ProperRequesterOptions): Request
       requester = druidRequesterFactory({
         host,
         timeout: timeout || 30000,
-        druidRequestDecorator: options.druidRequestDecorator
+        requestDecorator: options.druidRequestDecorator
       });
       break;
 
@@ -60,8 +61,8 @@ export function properRequesterFactory(options: ProperRequesterOptions): Request
   }
 
   if (retry) {
-    druidRequester = helper.retryRequesterFactory({
-      requester: druidRequester,
+    requester = helper.retryRequesterFactory({
+      requester: requester,
       retry: retry,
       delay: 500,
       retryOnTimeout: false
@@ -69,17 +70,17 @@ export function properRequesterFactory(options: ProperRequesterOptions): Request
   }
 
   if (verbose) {
-    druidRequester = helper.verboseRequesterFactory({
-      requester: druidRequester
+    requester = helper.verboseRequesterFactory({
+      requester: requester
     });
   }
 
   if (concurrentLimit) {
-    druidRequester = helper.concurrentLimitRequesterFactory({
-      requester: druidRequester,
+    requester = helper.concurrentLimitRequesterFactory({
+      requester: requester,
       concurrentLimit: concurrentLimit
     });
   }
 
-  return druidRequester;
+  return requester;
 }

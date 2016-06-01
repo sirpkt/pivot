@@ -5,7 +5,7 @@ import { DruidRequestDecorator } from 'plywood-druid-requester';
 import { AppSettings, DataSource, DataSourceJS, SourceListScan, Cluster } from '../common/models/index';
 import { dataSourceToYAML } from '../common/utils/yaml-helper/yaml-helper';
 import { ServerSettings } from './models/server-settings/server-settings';
-import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, dataSourceLoaderFactory, SettingsManager } from './utils/index';
+import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, SettingsManager } from './utils/index';
 
 
 function errorExit(message: string): void {
@@ -181,48 +181,21 @@ if (auth) {
 }
 export const AUTH = authModule;
 
-export const DATA_SOURCES: DataSource[] = (config.dataSources || []).map((dataSourceJS: DataSourceJS, i: number) => {
-  if (typeof dataSourceJS !== 'object') errorExit(`DataSource ${i} is not valid`);
-  var dataSourceName = dataSourceJS.name;
-  if (typeof dataSourceName !== 'string') errorExit(`DataSource ${i} must have a name`);
 
-  try {
-    return DataSource.fromJS(dataSourceJS);
-  } catch (e) {
-    errorExit(`Could not parse data source '${dataSourceJS.name}': ${e.message}`);
-    return;
-  }
-});
-
-
-var configDirectory = configFileDir || path.join(__dirname, '../..');
+//var configDirectory = configFileDir || path.join(__dirname, '../..');
 
 if (!PRINT_CONFIG) {
   console.log(`Starting Pivot v${VERSION}`);
 }
 
-export const DATA_SOURCE_MANAGER: DataSourceManager = dataSourceManagerFactory({
-  dataSources: DATA_SOURCES,
-  druidRequester,
-  dataSourceLoader: dataSourceLoaderFactory(druidRequester, configDirectory, cluster.timeout, cluster.introspectionStrategy),
-
-  pageMustLoadTimeout: serverSettings.pageMustLoadTimeout,
-
-  sourceListScan: cluster.sourceListScan,
-  sourceListRefreshOnLoad: cluster.sourceListRefreshOnLoad,
-  sourceListRefreshInterval: cluster.sourceListRefreshInterval,
-  sourceReintrospectOnLoad: cluster.sourceReintrospectOnLoad,
-  sourceReintrospectInterval: cluster.sourceReintrospectInterval,
-
-  log: PRINT_CONFIG ? null : (line: string) => console.log(line)
-});
-
 if (PRINT_CONFIG) {
   var withComments = Boolean(parsedArgs['with-comments']);
   var dataSourcesOnly = Boolean(parsedArgs['data-sources-only']);
-  var cluster = appSettings.clusters[0];
 
-  DATA_SOURCE_MANAGER.getQueryableDataSources().then((dataSources) => {
+  SETTINGS_MANAGER.appSettings().then(appSettings => {
+    var { dataSources, clusters } = appSettings;
+    var cluster = clusters[0];
+
     if (!dataSources.length) throw new Error('Could not find any data sources please verify network connectivity');
 
     var lines = [
