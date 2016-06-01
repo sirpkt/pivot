@@ -3,7 +3,7 @@ require('./pivot-entry.css');
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { addErrorMonitor } from './utils/error-monitor/error-monitor';
-import { DataSource } from '../common/models/index';
+import { DataSource, AppSettingsJS } from '../common/models/index';
 
 import { Loader } from './components/loader/loader';
 
@@ -18,11 +18,19 @@ ReactDOM.render(
   container
 );
 
-var config: any = (window as any)['__CONFIG__'];
-if (!config || !config.appSettingsJS || !config.appSettingsJS.dataSources) throw new Error('config not found');
+interface Config {
+  version: string;
+  user: any;
+  appSettings: AppSettingsJS;
+}
 
-if (config.appSettingsJS.dataSources.length) {
-  var version = config.version || '0.0.0';
+var config: Config = (window as any)['__CONFIG__'];
+if (!config || !config.version || !config.appSettings || !config.appSettings.dataSources) {
+  throw new Error('config not found');
+}
+
+if (config.appSettings.dataSources.length) {
+  var version = config.version;
 
   require.ensure([
     'chronoshift',
@@ -36,7 +44,7 @@ if (config.appSettingsJS.dataSources.length) {
     var AppSettings = require('../common/models/index').AppSettings;
     var PivotApplication = require('./components/pivot-application/pivot-application').PivotApplication;
 
-    var appSettings = AppSettings.fromJS(config.appSettingsJS).attachExecutors((dataSource: DataSource) => {
+    var appSettings = AppSettings.fromJS(config.appSettings).attachExecutors((dataSource: DataSource) => {
       return queryUrlExecutorFactory(dataSource.name, 'plywood', version);
     });
 

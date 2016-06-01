@@ -57,7 +57,7 @@ ${content}
 export function pivotLayout(options: ViewOptions): string {
   const { version, user, appSettings } = options;
   return layout(options, `<div class="app-container"></div>
-<script>var __CONFIG__ = ${JSON.stringify({ user, appSettings })};</script>
+<script>var __CONFIG__ = ${JSON.stringify({ version, user, appSettings })};</script>
 <script charset="UTF-8" src="/pivot.js?v=${version}"></script>`
   );
 }

@@ -554,6 +554,8 @@ export class DataSource implements Instance<DataSourceValue, DataSourceJS> {
     // No need for the overrides
     value.attributeOverrides = null;
 
+    value.options = null;
+
     return new DataSource(value);
   }
 

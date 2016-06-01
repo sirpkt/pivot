@@ -137,8 +137,8 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
     var js: ClusterJS = {
       name: this.name
     };
-    js.host = this.host;
-    js.version = this.version;
+    if (this.host) js.host = this.host;
+    if (this.version) js.version = this.version;
     js.timeout = this.timeout;
     js.introspectionStrategy = this.introspectionStrategy;
     js.sourceListScan = this.sourceListScan;
