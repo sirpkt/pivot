@@ -58,6 +58,8 @@ export interface NumberRangePickerState {
 }
 
 export class NumberRangePicker extends React.Component<NumberRangePickerProps, NumberRangePickerState> {
+  public mounted: boolean;
+
   constructor() {
     super();
     this.state = {
@@ -85,17 +87,21 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
     dataSource.executor(query)
       .then(
         (dataset: Dataset) => {
+          if (!this.mounted) return;
           var min = (dataset.data[0]['Min'] as number);
           var max = (dataset.data[0]['Max'] as number);
+
+          var step = max && min && isFinite(max) && isFinite(min) ? (max - min) / rightBound : 1;
 
           this.setState({
             min,
             max,
             loading: false,
-            step: max && min ? (max - min) / rightBound : 1
+            step: step !== 0 && isFinite(step) ? step : 1
           });
         },
         (error) => {
+          if (!this.mounted) return;
           this.setState({
             loading: false,
             error
@@ -105,6 +111,7 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
   }
 
   componentDidMount() {
+    this.mounted = true;
     var node = ReactDOM.findDOMNode(this.refs['number-range-picker']);
     var rect =  node.getBoundingClientRect();
     var { essence, dimension } = this.props;
@@ -116,15 +123,17 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
 
   }
 
+  componentWillUnmount() {
+    this.mounted = false;
+  }
+
   relativePositionToValue(position: number) {
     const { step, min, max, rightBound } = this.state;
     if (position === 0) return minToAny();
     if (position === rightBound) return maxToAny();
 
     var range = max - min !== 0 ? max - min : Math.abs(max);
-    var toSignificant = toSignificantDigits(position * step, getNumberOfDigitsToShow(range));
-    return digitsToHumanFriendly(toSignificant, range);
-
+    return toSignificantDigits(position * step, getNumberOfDigitsToShow(range));
   }
 
   valueToRelativePosition(value: number) {
@@ -191,7 +200,7 @@ export class NumberRangePicker extends React.Component<NumberRangePickerProps, N
 
     var content: JSX.Element = null;
 
-    if (rightBound && step) {
+    if (rightBound && step && isFinite(max) && isFinite(min)) {
       var relativeEnd = isEndAny(end) ? rightBound : this.valueToRelativePosition(end);
       var relativeStart = this.valueToRelativePosition(start);
       var adjustedRightBound = getAdjustedEnd(rightBound);
