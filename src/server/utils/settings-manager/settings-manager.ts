@@ -2,8 +2,8 @@ import * as Q from 'q';
 import { External, Dataset, DruidExternal } from 'plywood';
 import { DruidRequestDecorator } from 'plywood-druid-requester';
 import { loadFileSync } from '../file/file';
-import { properRequesterFactory } from '../requester/requester';
-import { AppSettings, Cluster } from '../../../common/models/index';
+import { properRequesterFactory, SupportedTypes } from '../requester/requester';
+import { AppSettings, Cluster, DataSource } from '../../../common/models/index';
 
 export interface SettingsLocation {
   location: 'local';
@@ -46,7 +46,7 @@ export class ClusterManager {
     this.managedExternals = options.initialExternals || [];
     this.onExternalChange = options.onExternalChange || noop;
 
-    var clusterType = 'druid'; // ToDo: cluster.type
+    var clusterType: SupportedTypes = 'druid'; // ToDo: cluster.type
 
     var druidRequestDecorator: DruidRequestDecorator = null;
     // if (clusterType === 'druid' && serverSettings.druidRequestDecoratorModule) {
@@ -106,7 +106,7 @@ export class ClusterManager {
             for (var source of sources) {
               if (this.managedExternals.filter(managedExternal => (managedExternal.external as any).dataSource === source).length) continue;
               this.managedExternals.push({
-                external: cluster.makeExternalFromSourceName(source, this.version),
+                external: cluster.makeExternalFromSourceName(source, this.version).attachRequester(requester),
                 autoDiscovered: true
               });
             }
@@ -168,7 +168,7 @@ export class SettingsManager {
   public clusterManagers: ClusterManager[];
   public initialLoad: Q.Promise<any>;
 
-  constructor(settingsLocation: SettingsLocation, log: (line: string) => void) {
+  constructor(settingsLocation: SettingsLocation, log?: (line: string) => void) {
     this.settingsLocation = settingsLocation;
     this.clusterManagers = [];
 
@@ -185,7 +185,7 @@ export class SettingsManager {
         const { clusters } = this.appSettings;
         clusters.forEach(cluster => {
           // Get each of their externals
-          var managedExternals = this.appSettings.getDataSourcesForCluster(cluster.name).map(dataSource => {
+          var initialExternals = this.appSettings.getDataSourcesForCluster(cluster.name).map(dataSource => {
             return {
               external: cluster.makeExternalFromDataSource(dataSource), // ToDo: figure out version story
               suppressIntrospection: dataSource.introspection === 'none'
@@ -193,7 +193,10 @@ export class SettingsManager {
           });
 
           // Make a cluster manager for each cluster and assign the correct initial externals to it.
-          this.clusterManagers.push(new ClusterManager(cluster, managedExternals, this.onExternalChange.bind(this, cluster)));
+          this.clusterManagers.push(new ClusterManager(cluster, {
+            initialExternals,
+            onExternalChange: this.onExternalChange.bind(this, cluster)
+          }));
         });
       });
 
@@ -207,13 +210,20 @@ export class SettingsManager {
       });
 
       return progress;
-    });
+    })
+      .catch(e => {
+        console.log("Error:", e);
+      });
+  }
+
+  getDataSource(dataSourceName: string): Q.Promise<DataSource> {
+    return this.getSettings().then(appSettings => appSettings.getDataSource(dataSourceName));
   }
 
   getSettings(): Q.Promise<AppSettings> {
     return this.initialLoad
       .then(() => {
-        return Q.all(clusterManagers.map(clusterManager => clusterManager.refresh()));
+        return Q.all(this.clusterManagers.map(clusterManager => clusterManager.refresh()));
       })
       .then(() => this.appSettings);
   }
@@ -221,12 +231,14 @@ export class SettingsManager {
   updateSettings(newSettings: AppSettings): Q.Promise<boolean> {
     if (this.settingsLocation.readOnly) return Q(false);
 
+    return Q(false); // ToDo
+
   }
 
   onExternalChange(cluster: Cluster, changedExternal: External): void {
     var dataSourceName = (changedExternal as any).context.xDataSource;
     console.log('onExternalChange', dataSourceName);
-    var dataSource = this.appSettings.getDataSource();
+    var dataSource = this.appSettings.getDataSource(dataSourceName);
     if (!dataSource) {
        dataSource = cluster.makeDataSourceFromExternal(changedExternal);
     }

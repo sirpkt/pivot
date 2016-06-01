@@ -3,8 +3,10 @@ import { druidRequesterFactory, DruidRequestDecorator } from 'plywood-druid-requ
 import { mySqlRequesterFactory } from 'plywood-mysql-requester';
 import { postgresRequesterFactory } from 'plywood-postgres-requester';
 
+export type SupportedTypes = 'druid' | 'mysql' | 'postgres';
+
 export interface ProperRequesterOptions {
-  type: 'druid' | 'mysql' | 'postgres';
+  type: SupportedTypes;
   host: string;
   retry?: number;
   timeout?: number;

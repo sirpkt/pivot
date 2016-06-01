@@ -5,7 +5,7 @@ import { DruidRequestDecorator } from 'plywood-druid-requester';
 import { AppSettings, DataSource, DataSourceJS, SourceListScan, Cluster } from '../common/models/index';
 import { dataSourceToYAML } from '../common/utils/yaml-helper/yaml-helper';
 import { ServerSettings } from './models/server-settings/server-settings';
-import { DataSourceManager, dataSourceManagerFactory, loadFileSync, properDruidRequesterFactory, SettingsManager } from './utils/index';
+import { loadFileSync, SettingsManager } from './utils/index';
 
 
 function errorExit(message: string): void {
@@ -192,7 +192,7 @@ if (PRINT_CONFIG) {
   var withComments = Boolean(parsedArgs['with-comments']);
   var dataSourcesOnly = Boolean(parsedArgs['data-sources-only']);
 
-  SETTINGS_MANAGER.appSettings().then(appSettings => {
+  SETTINGS_MANAGER.getSettings().then(appSettings => {
     var { dataSources, clusters } = appSettings;
     var cluster = clusters[0];
 

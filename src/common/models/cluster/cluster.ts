@@ -47,6 +47,7 @@ export class Cluster implements Instance<ClusterValue, ClusterJS> {
 
   static fromJS(parameters: ClusterJS): Cluster {
     var {
+      name,
       host,
       version,
       timeout,

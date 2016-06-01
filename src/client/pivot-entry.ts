@@ -3,7 +3,7 @@ require('./pivot-entry.css');
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
 import { addErrorMonitor } from './utils/error-monitor/error-monitor';
-import { DataSourceJS, AppSettings } from '../common/models/index';
+import { DataSource } from '../common/models/index';
 
 import { Loader } from './components/loader/loader';
 
@@ -25,20 +25,18 @@ if (config.appSettingsJS.dataSources.length) {
   var version = config.version || '0.0.0';
 
   require.ensure([
-    'immutable',
     'chronoshift',
     'chronoshift/lib/walltime/walltime-data.js',
     './utils/ajax/ajax',
     '../common/models/index',
     './components/pivot-application/pivot-application'
   ], (require) => {
-    var List = require('immutable').List;
     var WallTime = require('chronoshift').WallTime;
     var queryUrlExecutorFactory = require('./utils/ajax/ajax').queryUrlExecutorFactory;
     var AppSettings = require('../common/models/index').AppSettings;
     var PivotApplication = require('./components/pivot-application/pivot-application').PivotApplication;
 
-    var appSettings = AppSettings.fromJS(config.appSettingsJS).attachExecutors((dataSource) => {
+    var appSettings = AppSettings.fromJS(config.appSettingsJS).attachExecutors((dataSource: DataSource) => {
       return queryUrlExecutorFactory(dataSource.name, 'plywood', version);
     });
 

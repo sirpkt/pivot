@@ -5,7 +5,6 @@ import * as path from 'path';
 import * as logger from 'morgan';
 import * as bodyParser from 'body-parser';
 import * as compress from 'compression';
-import { $, Expression, Datum, Dataset } from 'plywood';
 
 import { Timezone, WallTime } from 'chronoshift';
 // Init chronoshift
@@ -15,7 +14,7 @@ if (!WallTime.rules) {
 }
 
 import { PivotRequest } from './utils/index';
-import { VERSION, DATA_SOURCE_MANAGER, AUTH, SERVER_SETTINGS } from './config';
+import { VERSION, AUTH, SERVER_SETTINGS } from './config';
 import * as plywoodRoutes from './routes/plywood/plywood';
 import * as plyqlRoutes from './routes/plyql/plyql';
 import * as pivotRoutes from './routes/pivot/pivot';

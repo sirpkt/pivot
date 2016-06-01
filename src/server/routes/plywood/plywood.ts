@@ -3,8 +3,7 @@ import { $, Expression, RefExpression, External, Datum, Dataset, TimeRange, basi
 import { Timezone, WallTime, Duration } from 'chronoshift';
 
 import { PivotRequest } from '../../utils/index';
-import { VERSION } from '../../config';
-import { DataSource } from '../../../common/models/index';
+import { VERSION, SETTINGS_MANAGER } from '../../config';
 
 var router = Router();
 
@@ -50,7 +49,7 @@ router.post('/', (req: PivotRequest, res: Response) => {
     return;
   }
 
-  req.dataSourceManager.getQueryableDataSource(dataSource)
+  SETTINGS_MANAGER.getDataSource(dataSource)
     .then((myDataSource) => {
       if (!myDataSource) {
         res.status(400).send({ error: 'unknown data source' });
